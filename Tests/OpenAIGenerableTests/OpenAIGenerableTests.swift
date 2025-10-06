@@ -336,6 +336,110 @@ final class OpenAIGenerableTests: XCTestCase {
         #endif
     }
 
+    func testArrayFields() throws {
+        #if canImport(OpenAIGenerableMacros)
+        assertMacroExpansion(
+            """
+            @OpenAIScheme
+            struct ArrayExample {
+                var tags: [String]
+                var scores: [Int]
+                var values: [Double]
+            }
+            """,
+            expandedSource: """
+            struct ArrayExample {
+                var tags: [String]
+                var scores: [Int]
+                var values: [Double]
+
+                static var openAISchema: [String: Any] {
+                    [
+                        "type": "json_schema",
+                        "name": "ArrayExample",
+                        "strict": true,
+                        "schema": [
+                            "type": "object",
+                            "properties": [
+                            "tags": ["type": "array", "items": ["type": "string"]],
+                            "scores": ["type": "array", "items": ["type": "integer"]],
+                            "values": ["type": "array", "items": ["type": "number"]]
+                            ],
+                            "required": ["tags", "scores", "values"],
+                            "additionalProperties": false
+                        ]
+                    ]
+                }
+            }
+            """,
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+
+    func testArrayOfCustomTypes() throws {
+        #if canImport(OpenAIGenerableMacros)
+        assertMacroExpansion(
+            """
+            @OpenAIScheme
+            struct Person {
+                var name: String
+            }
+
+            @OpenAIScheme
+            struct Team {
+                var members: [Person]
+            }
+            """,
+            expandedSource: """
+            struct Person {
+                var name: String
+
+                static var openAISchema: [String: Any] {
+                    [
+                        "type": "json_schema",
+                        "name": "Person",
+                        "strict": true,
+                        "schema": [
+                            "type": "object",
+                            "properties": [
+                            "name": ["type": "string"]
+                            ],
+                            "required": ["name"],
+                            "additionalProperties": false
+                        ]
+                    ]
+                }
+            }
+            struct Team {
+                var members: [Person]
+
+                static var openAISchema: [String: Any] {
+                    [
+                        "type": "json_schema",
+                        "name": "Team",
+                        "strict": true,
+                        "schema": [
+                            "type": "object",
+                            "properties": [
+                            "members": ["type": "array", "items": Person.openAISchema["schema"] as! [String: Any]]
+                            ],
+                            "required": ["members"],
+                            "additionalProperties": false
+                        ]
+                    ]
+                }
+            }
+            """,
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+
     func testComplexNestedEnums() throws {
         #if canImport(OpenAIGenerableMacros)
         assertMacroExpansion(

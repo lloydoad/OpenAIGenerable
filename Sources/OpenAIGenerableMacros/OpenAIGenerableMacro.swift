@@ -116,11 +116,11 @@ public struct OpenAISchemaMacro: MemberMacro {
         // Generate anyOf structure for associated values
         let anyOfCases = associatedCases.map { caseName, params in
             let properties = params.map { label, type in
-                let jsonType = mapSwiftTypeToJSONType(type)
-                if jsonType == "object" || jsonType == "enum" {
+                let typeInfo = mapSwiftTypeToJSONType(type)
+                if typeInfo.jsonType == "object" || typeInfo.jsonType == "enum" {
                     return "\"\(label)\": \(type).openAISchema[\"schema\"] as! [String: Any]"
                 } else {
-                    return "\"\(label)\": [\"type\": \"\(jsonType)\"]"
+                    return "\"\(label)\": [\"type\": \"\(typeInfo.jsonType)\"]"
                 }
             }.joined(separator: ",\n\t\t\t\t\t")
 
@@ -192,14 +192,29 @@ public struct OpenAISchemaMacro: MemberMacro {
 
         // 4. Generate the schema properties dictionary
         let propertiesEntries = properties.map { prop in
-            let jsonType = mapSwiftTypeToJSONType(prop.type)
+            let typeInfo = mapSwiftTypeToJSONType(prop.type)
 
-            if jsonType == "object" || jsonType == "enum" {
+            if typeInfo.isArray {
+                // Handle array types
+                guard let elementType = typeInfo.elementType else {
+                    return "\"\(prop.name)\": [\"type\": \"array\", \"items\": [:]]"
+                }
+
+                let elementTypeInfo = mapSwiftTypeToJSONType(elementType)
+
+                if elementTypeInfo.jsonType == "object" || elementTypeInfo.jsonType == "enum" {
+                    // Array of custom types
+                    return "\"\(prop.name)\": [\"type\": \"array\", \"items\": \(elementType).openAISchema[\"schema\"] as! [String: Any]]"
+                } else {
+                    // Array of primitives
+                    return "\"\(prop.name)\": [\"type\": \"array\", \"items\": [\"type\": \"\(elementTypeInfo.jsonType)\"]]"
+                }
+            } else if typeInfo.jsonType == "object" || typeInfo.jsonType == "enum" {
                 // For custom types (structs/enums), reference their schema
                 return "\"\(prop.name)\": \(prop.type).openAISchema[\"schema\"] as! [String: Any]"
             } else {
                 // For primitives, use simple type
-                return "\"\(prop.name)\": [\"type\": \"\(jsonType)\"]"
+                return "\"\(prop.name)\": [\"type\": \"\(typeInfo.jsonType)\"]"
             }
         }.joined(separator: ",\n\t\t")
 
@@ -230,18 +245,25 @@ public struct OpenAISchemaMacro: MemberMacro {
     }
 
       // Helper: Map Swift types to JSON Schema types
-      private static func mapSwiftTypeToJSONType(_ swiftType: String) -> String {
+      private static func mapSwiftTypeToJSONType(_ swiftType: String) -> (jsonType: String, isArray: Bool, elementType: String?) {
+          // Check if it's an array
+          if swiftType.hasPrefix("[") && swiftType.hasSuffix("]") {
+              let elementType = String(swiftType.dropFirst().dropLast()).trimmingCharacters(in: .whitespaces)
+              return ("array", true, elementType)
+          }
+
+          // Handle primitives
           switch swiftType {
           case "String":
-              return "string"
+              return ("string", false, nil)
           case "Int", "Int8", "Int16", "Int32", "Int64":
-              return "integer"
+              return ("integer", false, nil)
           case "Double", "Float", "CGFloat":
-              return "number"
+              return ("number", false, nil)
           case "Bool":
-              return "boolean"
+              return ("boolean", false, nil)
           default:
-              return "object" // For custom types
+              return ("object", false, nil) // For custom types
           }
       }
 }
