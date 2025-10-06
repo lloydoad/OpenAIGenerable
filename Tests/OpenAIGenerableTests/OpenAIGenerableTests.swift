@@ -9,7 +9,6 @@ import XCTest
 import OpenAIGenerableMacros
 
 let testMacros: [String: Macro.Type] = [
-    "stringify": StringifyMacro.self,
     "OpenAIScheme": OpenAISchemaMacro.self,
 ]
 #endif

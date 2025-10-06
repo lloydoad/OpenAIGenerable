@@ -4,42 +4,29 @@ import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
 import Foundation
 
-/// Implementation of the `stringify` macro, which takes an expression
-/// of any type and produces a tuple containing the value of that expression
-/// and the source code that produced the value. For example
-///
-///     #stringify(x + y)
-///
-///  will expand to
-///
-///     (x + y, "x + y")
-public struct StringifyMacro: ExpressionMacro {
-    public static func expansion(
-        of node: some FreestandingMacroExpansionSyntax,
-        in context: some MacroExpansionContext
-    ) -> ExprSyntax {
-        guard let argument = node.arguments.first?.expression else {
-            fatalError("compiler bug: the macro does not have any arguments")
-        }
-
-        return "(\(argument), \(literal: argument.description))"
-    }
-}
-
+/// An enumeration representing errors that can occur during macro processing.
 enum MacroError: Error, CustomStringConvertible {
+    /// Error indicating that the macro was applied to a declaration that is not a struct or enum.
     case notAStruct
-    case associatedValuesNotSupported
 
+    /// A textual description of the error.
     var description: String {
         switch self {
         case .notAStruct:
             return "@OpenAIScheme can only be applied to structs or enums"
-        case .associatedValuesNotSupported:
-            return "@OpenAIScheme does not support enums with associated values yet"
         }
     }
 }
 
+/// A macro that generates a JSON schema representation for a struct or enum.
+/// 
+/// The `OpenAISchemaMacro` is responsible for expanding the `@OpenAIScheme` attribute
+/// into a static `openAISchema` property. This property provides a JSON schema
+/// that describes the structure and types of the fields within the struct or enum.
+/// 
+/// - Note: This macro currently supports:
+///     - structs
+///     - enums (string enums + associated values)
 public struct OpenAISchemaMacro: MemberMacro {
     public static func expansion(
         of node: AttributeSyntax,
@@ -271,7 +258,6 @@ public struct OpenAISchemaMacro: MemberMacro {
 @main
 struct OpenAIGenerablePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
-        StringifyMacro.self,
         OpenAISchemaMacro.self
     ]
 }
