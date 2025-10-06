@@ -335,4 +335,192 @@ final class OpenAIGenerableTests: XCTestCase {
         throw XCTSkip("macros are only supported when running tests for the host platform")
         #endif
     }
+
+    func testComplexNestedEnums() throws {
+        #if canImport(OpenAIGenerableMacros)
+        assertMacroExpansion(
+            """
+            @OpenAIScheme
+            enum GarageTool {
+                case scissors
+                case screw
+            }
+
+            @OpenAIScheme
+            enum GardenTool {
+                case shovel
+                case spade
+            }
+
+            @OpenAIScheme
+            enum HouseTool {
+                case garden(GardenTool)
+                case garage(GarageTool)
+            }
+
+            @OpenAIScheme
+            enum Quantity {
+                case count(Int)
+                case pounds(Double)
+            }
+
+            @OpenAIScheme
+            struct Inventory {
+                var quantity: Quantity
+                var houseTool: HouseTool
+            }
+            """,
+            expandedSource: """
+            enum GarageTool {
+                case scissors
+                case screw
+
+                static var openAISchema: [String: Any] {
+                    [
+                        "type": "json_schema",
+                        "name": "GarageTool",
+                        "strict": true,
+                        "schema": [
+                            "type": "string",
+                            "enum": ["scissors", "screw"]
+                        ]
+                    ]
+                }
+            }
+            enum GardenTool {
+                case shovel
+                case spade
+
+                static var openAISchema: [String: Any] {
+                    [
+                        "type": "json_schema",
+                        "name": "GardenTool",
+                        "strict": true,
+                        "schema": [
+                            "type": "string",
+                            "enum": ["shovel", "spade"]
+                        ]
+                    ]
+                }
+            }
+            enum HouseTool {
+                case garden(GardenTool)
+                case garage(GarageTool)
+
+                static var openAISchema: [String: Any] {
+                    [
+                        "type": "json_schema",
+                        "name": "HouseTool",
+                        "strict": true,
+                        "schema": [
+                            "anyOf": [
+                            [
+                                    "type": "object",
+                                    "properties": [
+                                        "garden": [
+                                            "type": "object",
+                                            "properties": [
+                                            "_0": GardenTool.openAISchema["schema"] as! [String: Any]
+                                            ],
+                                            "required": ["_0"],
+                                            "additionalProperties": false
+                                        ]
+                                    ],
+                                    "required": ["garden"],
+                                    "additionalProperties": false
+                                ],
+                            [
+                                    "type": "object",
+                                    "properties": [
+                                        "garage": [
+                                            "type": "object",
+                                            "properties": [
+                                            "_0": GarageTool.openAISchema["schema"] as! [String: Any]
+                                            ],
+                                            "required": ["_0"],
+                                            "additionalProperties": false
+                                        ]
+                                    ],
+                                    "required": ["garage"],
+                                    "additionalProperties": false
+                                ]
+                            ]
+                        ]
+                    ]
+                }
+            }
+            enum Quantity {
+                case count(Int)
+                case pounds(Double)
+
+                static var openAISchema: [String: Any] {
+                    [
+                        "type": "json_schema",
+                        "name": "Quantity",
+                        "strict": true,
+                        "schema": [
+                            "anyOf": [
+                            [
+                                    "type": "object",
+                                    "properties": [
+                                        "count": [
+                                            "type": "object",
+                                            "properties": [
+                                            "_0": ["type": "integer"]
+                                            ],
+                                            "required": ["_0"],
+                                            "additionalProperties": false
+                                        ]
+                                    ],
+                                    "required": ["count"],
+                                    "additionalProperties": false
+                                ],
+                            [
+                                    "type": "object",
+                                    "properties": [
+                                        "pounds": [
+                                            "type": "object",
+                                            "properties": [
+                                            "_0": ["type": "number"]
+                                            ],
+                                            "required": ["_0"],
+                                            "additionalProperties": false
+                                        ]
+                                    ],
+                                    "required": ["pounds"],
+                                    "additionalProperties": false
+                                ]
+                            ]
+                        ]
+                    ]
+                }
+            }
+            struct Inventory {
+                var quantity: Quantity
+                var houseTool: HouseTool
+
+                static var openAISchema: [String: Any] {
+                    [
+                        "type": "json_schema",
+                        "name": "Inventory",
+                        "strict": true,
+                        "schema": [
+                            "type": "object",
+                            "properties": [
+                            "quantity": Quantity.openAISchema["schema"] as! [String: Any],
+                            "houseTool": HouseTool.openAISchema["schema"] as! [String: Any]
+                            ],
+                            "required": ["quantity", "houseTool"],
+                            "additionalProperties": false
+                        ]
+                    ]
+                }
+            }
+            """,
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
 }
