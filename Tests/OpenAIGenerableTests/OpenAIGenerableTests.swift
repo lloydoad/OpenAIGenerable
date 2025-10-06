@@ -14,38 +14,17 @@ let testMacros: [String: Macro.Type] = [
 ]
 #endif
 
-final class OpenAIGenerableTests: XCTestCase {
-    func testMacro() throws {
-        #if canImport(OpenAIGenerableMacros)
-        assertMacroExpansion(
-            """
-            #stringify(a + b)
-            """,
-            expandedSource: """
-            (a + b, "a + b")
-            """,
-            macros: testMacros
-        )
-        #else
-        throw XCTSkip("macros are only supported when running tests for the host platform")
-        #endif
+extension String {
+    func withoutWhitespaces() -> String {
+        self
+        .split(separator: "\n")
+        .map { $0.trimmingCharacters(in: .whitespaces) } 
+        .filter { !$0.isEmpty }
+        .joined(separator: " ")
     }
+}
 
-    func testMacroWithStringLiteral() throws {
-        #if canImport(OpenAIGenerableMacros)
-        assertMacroExpansion(
-            #"""
-            #stringify("Hello, \(name)")
-            """#,
-            expandedSource: #"""
-            ("Hello, \(name)", #""Hello, \(name)""#)
-            """#,
-            macros: testMacros
-        )
-        #else
-        throw XCTSkip("macros are only supported when running tests for the host platform")
-        #endif
-    }
+final class OpenAIGenerableTests: XCTestCase {
 
     func testSimpleStructWithStrings() throws {
         #if canImport(OpenAIGenerableMacros)
@@ -236,6 +215,72 @@ final class OpenAIGenerableTests: XCTestCase {
                             ],
                             "required": ["title", "priority"],
                             "additionalProperties": false
+                        ]
+                    ]
+                }
+            }
+            """,
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+
+    func testAssociatedEnum() throws {
+        #if canImport(OpenAIGenerableMacros)
+        assertMacroExpansion(
+            """
+            @OpenAIScheme
+            enum Result {
+                case success(String)
+                case error(code: Int, message: String)
+            }
+            """,
+            expandedSource: """
+            enum Result {
+                case success(String)
+                case error(code: Int, message: String)
+
+                static var openAISchema: [String: Any] {
+                    [
+                        "type": "json_schema",
+                        "name": "Result",
+                        "strict": true,
+                        "schema": [
+                            "anyOf": [
+                            [
+                                    "type": "object",
+                                    "properties": [
+                                        "success": [
+                                            "type": "object",
+                                            "properties": [
+                                            "_0": ["type": "string"]
+                                            ],
+                                            "required": ["_0"],
+                                            "additionalProperties": false
+                                        ]
+                                    ],
+                                    "required": ["success"],
+                                    "additionalProperties": false
+                                ],
+                            [
+                                    "type": "object",
+                                    "properties": [
+                                        "error": [
+                                            "type": "object",
+                                            "properties": [
+                                            "code": ["type": "integer"],
+                                            "message": ["type": "string"]
+                                            ],
+                                            "required": ["code", "message"],
+                                            "additionalProperties": false
+                                        ]
+                                    ],
+                                    "required": ["error"],
+                                    "additionalProperties": false
+                                ]
+                            ]
                         ]
                     ]
                 }

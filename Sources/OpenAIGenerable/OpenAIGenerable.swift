@@ -49,10 +49,63 @@ extension SubObject {
 
 ___
 
+
 enum AssociatedEnumObject {
-   case one(some Codable)
-   case two(some Codable)
+   case one(AssociatedType, SecondAssociatedType)
+   case two(myKey: AssociatedType)
+   case three(ThirdAssociatedType)
 }
+
+[
+    "anyOf": [
+        [
+            "type": "object",
+            "properties": [
+                "one": [
+                    "type": "object",
+                    "properties": [
+                        "_0": AssociatedType.openAISchema["schema"] as! [String: Any],
+                        "_1": SecondAssociatedType.openAISchema["schema"] as! [String: Any]
+                    ],
+                    "required": ["_0", "_1"],
+                    "additionalProperties": false
+                ],
+            ],
+            "required": ["one"],
+            "additionalProperties": false
+        ],
+        [
+            "type": "object",
+            "properties": [
+                "two": [
+                    "type": "object",
+                    "properties": [
+                        "myKey": AssociatedType.openAISchema["schema"] as! [String: Any],
+                    ],
+                    "required": ["myKey"],
+                    "additionalProperties": false
+                ],
+            ],
+            "required": ["two"],
+            "additionalProperties": false
+        ],
+        [
+            "type": "object",
+            "properties": [
+                "three": [
+                    "type": "object",
+                    "properties": [
+                        "_0": ThirdAssociatedType.openAISchema["schema"] as! [String: Any],
+                    ],
+                    "required": ["_0"],
+                    "additionalProperties": false
+                ],
+            ],
+            "required": ["three"],
+            "additionalProperties": false
+        ]
+    ]
+]
 
 {
     "anyOf": [

@@ -2,6 +2,7 @@ import SwiftCompilerPlugin
 import SwiftSyntax
 import SwiftSyntaxBuilder
 import SwiftSyntaxMacros
+import Foundation
 
 /// Implementation of the `stringify` macro, which takes an expression
 /// of any type and produces a tuple containing the value of that expression
@@ -63,7 +64,8 @@ public struct OpenAISchemaMacro: MemberMacro {
 
         // Extract enum cases
         let members = enumDecl.memberBlock.members
-        var cases: [String] = []
+        var simpleCases: [String] = []
+        var associatedCases: [(name: String, params: [(label: String, type: String)])] = []
 
         for member in members {
             guard let caseDecl = member.decl.as(EnumCaseDeclSyntax.self) else {
@@ -71,15 +73,77 @@ public struct OpenAISchemaMacro: MemberMacro {
             }
 
             for element in caseDecl.elements {
+                let caseName = element.name.text
+
                 // Check if case has associated values
-                if element.parameterClause != nil {
-                    throw MacroError.associatedValuesNotSupported
+                if let paramClause = element.parameterClause {
+                    var params: [(label: String, type: String)] = []
+
+                    for (index, param) in paramClause.parameters.enumerated() {
+                        let label = param.firstName?.text ?? "_\(index)"
+                        let type = param.type.description.trimmingCharacters(in: .whitespaces)
+                        params.append((label: label, type: type))
+                    }
+
+                    associatedCases.append((name: caseName, params: params))
+                } else {
+                    simpleCases.append(caseName)
                 }
-                cases.append(element.name.text)
             }
         }
 
-        let enumValues = cases.map { "\"\($0)\"" }.joined(separator: ", ")
+        // If all cases are simple, generate string enum
+        if associatedCases.isEmpty {
+            let enumValues = simpleCases.map { "\"\($0)\"" }.joined(separator: ", ")
+
+            let schemaCode = """
+                static var openAISchema: [String: Any] {
+                [
+                    "type": "json_schema",
+                    "name": "\(enumName)",
+                    "strict": true,
+                    "schema": [
+                        "type": "string",
+                        "enum": [\(enumValues)]
+                    ]
+                ]
+            }
+            """
+
+            return [DeclSyntax(stringLiteral: schemaCode)]
+        }
+
+        // Generate anyOf structure for associated values
+        let anyOfCases = associatedCases.map { caseName, params in
+            let properties = params.map { label, type in
+                let jsonType = mapSwiftTypeToJSONType(type)
+                if jsonType == "object" || jsonType == "enum" {
+                    return "\"\(label)\": \(type).openAISchema[\"schema\"] as! [String: Any]"
+                } else {
+                    return "\"\(label)\": [\"type\": \"\(jsonType)\"]"
+                }
+            }.joined(separator: ",\n\t\t\t\t\t")
+
+            let requiredFields = params.map { "\"\($0.label)\"" }.joined(separator: ", ")
+
+            return """
+            [
+                    "type": "object",
+                    "properties": [
+                        "\(caseName)": [
+                            "type": "object",
+                            "properties": [
+                            \(properties)
+                            ],
+                            "required": [\(requiredFields)],
+                            "additionalProperties": false
+                        ]
+                    ],
+                    "required": ["\(caseName)"],
+                    "additionalProperties": false
+                ]
+            """
+        }.joined(separator: ",\n\t\t")
 
         let schemaCode = """
             static var openAISchema: [String: Any] {
@@ -88,8 +152,9 @@ public struct OpenAISchemaMacro: MemberMacro {
                 "name": "\(enumName)",
                 "strict": true,
                 "schema": [
-                    "type": "string",
-                    "enum": [\(enumValues)]
+                    "anyOf": [
+                    \(anyOfCases)
+                    ]
                 ]
             ]
         }
