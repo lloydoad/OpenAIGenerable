@@ -150,6 +150,104 @@ final class OpenAIGenerableTests: XCTestCase {
         #endif
     }
 
+    func testSimpleStringEnum() throws {
+        #if canImport(OpenAIGenerableMacros)
+        assertMacroExpansion(
+            """
+            @OpenAIScheme
+            enum Status {
+                case pending
+                case approved
+                case rejected
+            }
+            """,
+            expandedSource: """
+            enum Status {
+                case pending
+                case approved
+                case rejected
+
+                static var openAISchema: [String: Any] {
+                    [
+                        "type": "json_schema",
+                        "name": "Status",
+                        "strict": true,
+                        "schema": [
+                            "type": "string",
+                            "enum": ["pending", "approved", "rejected"]
+                        ]
+                    ]
+                }
+            }
+            """,
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+
+    func testStructWithEnumProperty() throws {
+        #if canImport(OpenAIGenerableMacros)
+        assertMacroExpansion(
+            """
+            @OpenAIScheme
+            enum Priority {
+                case low
+                case high
+            }
+            @OpenAIScheme
+            struct Task {
+                var title: String
+                var priority: Priority
+            }
+            """,
+            expandedSource: """
+            enum Priority {
+                case low
+                case high
+
+                static var openAISchema: [String: Any] {
+                    [
+                        "type": "json_schema",
+                        "name": "Priority",
+                        "strict": true,
+                        "schema": [
+                            "type": "string",
+                            "enum": ["low", "high"]
+                        ]
+                    ]
+                }
+            }
+            struct Task {
+                var title: String
+                var priority: Priority
+
+                static var openAISchema: [String: Any] {
+                    [
+                        "type": "json_schema",
+                        "name": "Task",
+                        "strict": true,
+                        "schema": [
+                            "type": "object",
+                            "properties": [
+                            "title": ["type": "string"],
+                            "priority": Priority.openAISchema["schema"] as! [String: Any]
+                            ],
+                            "required": ["title", "priority"],
+                            "additionalProperties": false
+                        ]
+                    ]
+                }
+            }
+            """,
+            macros: testMacros
+        )
+        #else
+        throw XCTSkip("macros are only supported when running tests for the host platform")
+        #endif
+    }
+
     func testStructWithMixedTypes() throws {
         #if canImport(OpenAIGenerableMacros)
         assertMacroExpansion(

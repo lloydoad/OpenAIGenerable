@@ -27,11 +27,14 @@ public struct StringifyMacro: ExpressionMacro {
 
 enum MacroError: Error, CustomStringConvertible {
     case notAStruct
+    case associatedValuesNotSupported
 
     var description: String {
         switch self {
         case .notAStruct:
-            return "@OpenAISchema can only be applied to structs"
+            return "@OpenAIScheme can only be applied to structs or enums"
+        case .associatedValuesNotSupported:
+            return "@OpenAIScheme does not support enums with associated values yet"
         }
     }
 }
@@ -42,11 +45,60 @@ public struct OpenAISchemaMacro: MemberMacro {
         providingMembersOf declaration: some DeclGroupSyntax,
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
-        // 1. Ensure we're attached to a struct
-        guard let structDecl = declaration.as(StructDeclSyntax.self) else {
-            throw MacroError.notAStruct
+        // Check if it's an enum
+        if let enumDecl = declaration.as(EnumDeclSyntax.self) {
+            return try expandEnum(enumDecl: enumDecl)
         }
 
+        // Check if it's a struct
+        if let structDecl = declaration.as(StructDeclSyntax.self) {
+            return try expandStruct(structDecl: structDecl)
+        }
+
+        throw MacroError.notAStruct
+    }
+
+    private static func expandEnum(enumDecl: EnumDeclSyntax) throws -> [DeclSyntax] {
+        let enumName = enumDecl.name.text
+
+        // Extract enum cases
+        let members = enumDecl.memberBlock.members
+        var cases: [String] = []
+
+        for member in members {
+            guard let caseDecl = member.decl.as(EnumCaseDeclSyntax.self) else {
+                continue
+            }
+
+            for element in caseDecl.elements {
+                // Check if case has associated values
+                if element.parameterClause != nil {
+                    throw MacroError.associatedValuesNotSupported
+                }
+                cases.append(element.name.text)
+            }
+        }
+
+        let enumValues = cases.map { "\"\($0)\"" }.joined(separator: ", ")
+
+        let schemaCode = """
+            static var openAISchema: [String: Any] {
+            [
+                "type": "json_schema",
+                "name": "\(enumName)",
+                "strict": true,
+                "schema": [
+                    "type": "string",
+                    "enum": [\(enumValues)]
+                ]
+            ]
+        }
+        """
+
+        return [DeclSyntax(stringLiteral: schemaCode)]
+    }
+
+    private static func expandStruct(structDecl: StructDeclSyntax) throws -> [DeclSyntax] {
         // 2. Get the struct name
         let structName = structDecl.name.text
 
@@ -76,9 +128,9 @@ public struct OpenAISchemaMacro: MemberMacro {
         // 4. Generate the schema properties dictionary
         let propertiesEntries = properties.map { prop in
             let jsonType = mapSwiftTypeToJSONType(prop.type)
-            // return "\"\(prop.name)\": [\"type\": \"\(jsonType)\"]"
-            if jsonType == "object" {
-                // For custom types, reference their schema
+
+            if jsonType == "object" || jsonType == "enum" {
+                // For custom types (structs/enums), reference their schema
                 return "\"\(prop.name)\": \(prop.type).openAISchema[\"schema\"] as! [String: Any]"
             } else {
                 // For primitives, use simple type
@@ -90,7 +142,7 @@ public struct OpenAISchemaMacro: MemberMacro {
         let requiredFields = properties.map { "\"\($0.name)\"" }.joined(separator: ", ")
 
         // 6. Generate the complete schema code
-        let schemaCode = 
+        let schemaCode =
         """
             static var openAISchema: [String: Any] {
             [
