@@ -19,15 +19,31 @@ enum MacroError: Error, CustomStringConvertible {
 }
 
 /// A macro that generates a JSON schema representation for a struct or enum.
-/// 
+///
 /// The `OpenAISchemaMacro` is responsible for expanding the `@OpenAIScheme` attribute
 /// into a static `openAISchema` property. This property provides a JSON schema
 /// that describes the structure and types of the fields within the struct or enum.
-/// 
+///
 /// - Note: This macro currently supports:
 ///     - structs
 ///     - enums (string enums + associated values)
-public struct OpenAISchemaMacro: MemberMacro {
+public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
+    public static func expansion(
+        of node: AttributeSyntax,
+        attachedTo declaration: some DeclGroupSyntax,
+        providingExtensionsOf type: some TypeSyntaxProtocol,
+        conformingTo protocols: [TypeSyntax],
+        in context: some MacroExpansionContext
+    ) throws -> [ExtensionDeclSyntax] {
+        // Create an extension that adds OpenAISchemaProviding conformance
+        let extensionDecl: DeclSyntax =
+            """
+            extension \(type.trimmed): OpenAISchemaProviding {}
+            """
+
+        return [extensionDecl.cast(ExtensionDeclSyntax.self)]
+    }
+
     public static func expansion(
         of node: AttributeSyntax,
         providingMembersOf declaration: some DeclGroupSyntax,
@@ -85,7 +101,7 @@ public struct OpenAISchemaMacro: MemberMacro {
             let enumValues = simpleCases.map { "\"\($0)\"" }.joined(separator: ", ")
 
             let schemaCode = """
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                 [
                     "type": "json_schema",
                     "name": "\(enumName)",
@@ -134,7 +150,7 @@ public struct OpenAISchemaMacro: MemberMacro {
         }.joined(separator: ",\n\t\t")
 
         let schemaCode = """
-            static var openAISchema: [String: Any] {
+            nonisolated public static var openAISchema: [String: Any] {
             [
                 "type": "json_schema",
                 "name": "\(enumName)",
@@ -212,7 +228,7 @@ public struct OpenAISchemaMacro: MemberMacro {
         // 6. Generate the complete schema code
         let schemaCode =
         """
-            static var openAISchema: [String: Any] {
+            nonisolated public static var openAISchema: [String: Any] {
             [
                 "type": "json_schema",
                 "name": "\(structName)",

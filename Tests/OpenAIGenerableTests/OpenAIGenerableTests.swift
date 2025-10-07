@@ -40,7 +40,7 @@ final class OpenAIGenerableTests: XCTestCase {
                 var id: String
                 var name: String
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "SubObject",
@@ -56,6 +56,9 @@ final class OpenAIGenerableTests: XCTestCase {
                         ]
                     ]
                 }
+            }
+
+            extension SubObject: OpenAISchemaProviding {
             }
             """,
             macros: testMacros
@@ -83,7 +86,7 @@ final class OpenAIGenerableTests: XCTestCase {
             struct Child {
                 var name: String
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "Child",
@@ -103,7 +106,7 @@ final class OpenAIGenerableTests: XCTestCase {
                 var id: String
                 var child: Child
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "Parent",
@@ -119,6 +122,12 @@ final class OpenAIGenerableTests: XCTestCase {
                         ]
                     ]
                 }
+            }
+
+            extension Child: OpenAISchemaProviding {
+            }
+
+            extension Parent: OpenAISchemaProviding {
             }
             """,
             macros: testMacros
@@ -145,7 +154,7 @@ final class OpenAIGenerableTests: XCTestCase {
                 case approved
                 case rejected
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "Status",
@@ -156,6 +165,9 @@ final class OpenAIGenerableTests: XCTestCase {
                         ]
                     ]
                 }
+            }
+
+            extension Status: OpenAISchemaProviding {
             }
             """,
             macros: testMacros
@@ -185,7 +197,7 @@ final class OpenAIGenerableTests: XCTestCase {
                 case low
                 case high
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "Priority",
@@ -201,7 +213,7 @@ final class OpenAIGenerableTests: XCTestCase {
                 var title: String
                 var priority: Priority
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "Task",
@@ -218,6 +230,12 @@ final class OpenAIGenerableTests: XCTestCase {
                     ]
                 }
             }
+
+            extension Priority: OpenAISchemaProviding {
+            }
+
+            extension Task: OpenAISchemaProviding {
+            }            
             """,
             macros: testMacros
         )
@@ -241,7 +259,7 @@ final class OpenAIGenerableTests: XCTestCase {
                 case success(String)
                 case error(code: Int, message: String)
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "Result",
@@ -284,6 +302,9 @@ final class OpenAIGenerableTests: XCTestCase {
                     ]
                 }
             }
+
+            extension Result: OpenAISchemaProviding {
+            } 
             """,
             macros: testMacros
         )
@@ -309,7 +330,7 @@ final class OpenAIGenerableTests: XCTestCase {
                 var age: Int
                 var score: Double
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "MixedData",
@@ -326,6 +347,9 @@ final class OpenAIGenerableTests: XCTestCase {
                         ]
                     ]
                 }
+            }
+
+            extension MixedData: OpenAISchemaProviding {
             }
             """,
             macros: testMacros
@@ -352,7 +376,7 @@ final class OpenAIGenerableTests: XCTestCase {
                 var scores: [Int]
                 var values: [Double]
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "ArrayExample",
@@ -369,6 +393,9 @@ final class OpenAIGenerableTests: XCTestCase {
                         ]
                     ]
                 }
+            }
+            
+            extension ArrayExample: OpenAISchemaProviding {
             }
             """,
             macros: testMacros
@@ -396,7 +423,7 @@ final class OpenAIGenerableTests: XCTestCase {
             struct Person {
                 var name: String
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "Person",
@@ -415,7 +442,7 @@ final class OpenAIGenerableTests: XCTestCase {
             struct Team {
                 var members: [Person]
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "Team",
@@ -430,6 +457,12 @@ final class OpenAIGenerableTests: XCTestCase {
                         ]
                     ]
                 }
+            }
+
+            extension Person: OpenAISchemaProviding {
+            }
+
+            extension Team: OpenAISchemaProviding {
             }
             """,
             macros: testMacros
@@ -478,7 +511,7 @@ final class OpenAIGenerableTests: XCTestCase {
                 case scissors
                 case screw
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "GarageTool",
@@ -494,7 +527,7 @@ final class OpenAIGenerableTests: XCTestCase {
                 case shovel
                 case spade
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "GardenTool",
@@ -510,7 +543,7 @@ final class OpenAIGenerableTests: XCTestCase {
                 case garden(GardenTool)
                 case garage(GarageTool)
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "HouseTool",
@@ -556,7 +589,7 @@ final class OpenAIGenerableTests: XCTestCase {
                 case count(Int)
                 case pounds(Double)
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "Quantity",
@@ -602,7 +635,7 @@ final class OpenAIGenerableTests: XCTestCase {
                 var quantity: Quantity
                 var houseTool: HouseTool
 
-                static var openAISchema: [String: Any] {
+                nonisolated public static var openAISchema: [String: Any] {
                     [
                         "type": "json_schema",
                         "name": "Inventory",
@@ -618,6 +651,21 @@ final class OpenAIGenerableTests: XCTestCase {
                         ]
                     ]
                 }
+            }
+
+            extension GarageTool: OpenAISchemaProviding {
+            }
+
+            extension GardenTool: OpenAISchemaProviding {
+            }
+
+            extension HouseTool: OpenAISchemaProviding {
+            }
+
+            extension Quantity: OpenAISchemaProviding {
+            }
+
+            extension Inventory: OpenAISchemaProviding {
             }
             """,
             macros: testMacros
