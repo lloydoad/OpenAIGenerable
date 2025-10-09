@@ -2,14 +2,16 @@ import OpenAIGenerable
 import Foundation
 
 // Example 1: Simple struct with primitives
-@OpenAIScheme
+@OpenAIScheme(description: "A person entity")
 struct Person {
+    @OpenAIProperty(description: "Full name")
     var name: String
+    @OpenAIProperty(description: "Age in years")
     var age: Int
 }
 
 // Example 2: Simple enum
-@OpenAIScheme
+@OpenAIScheme(description: "Task priority levels")
 enum Priority {
     case low
     case medium
@@ -17,7 +19,7 @@ enum Priority {
 }
 
 // Example 3: Enum with associated values
-@OpenAIScheme
+@OpenAIScheme(description: "Result type for operations")
 enum Result {
     case success(String)
     case error(code: Int, message: String)
@@ -32,16 +34,19 @@ struct Team {
 }
 
 // Example 5: Complex nested structure
-@OpenAIScheme
+@OpenAIScheme(description: "used to represent the state of a task")
 enum Status {
     case pending
     case completed(Result)
 }
 
-@OpenAIScheme
+@OpenAIScheme(description: "Work task. usually the smallest unit of work")
 struct Task {
+    @OpenAIProperty(description: "summary title, should be less that 10 words")
     var title: String
+    @OpenAIProperty(description: "name of developer(s) working on task")
     var assignees: [String]
+    @OpenAIProperty(description: "state of task")
     var status: Status
 }
 

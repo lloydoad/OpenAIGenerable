@@ -18,6 +18,21 @@ enum MacroError: Error, CustomStringConvertible {
     }
 }
 
+/// A peer macro that adds description metadata to properties.
+///
+/// This macro doesn't generate any code itself, but the `@OpenAISchemaMacro`
+/// reads these attributes during expansion to include property descriptions.
+public struct OpenAIPropertyMacro: PeerMacro {
+    public static func expansion(
+        of node: AttributeSyntax,
+        providingPeersOf declaration: some DeclSyntaxProtocol,
+        in context: some MacroExpansionContext
+    ) throws -> [DeclSyntax] {
+        // This macro doesn't generate code, it just attaches metadata
+        return []
+    }
+}
+
 /// A macro that generates a JSON schema representation for a struct or enum.
 ///
 /// The `OpenAISchemaMacro` is responsible for expanding the `@OpenAIScheme` attribute
@@ -50,20 +65,66 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
         conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [DeclSyntax] {
+        // Extract description from @OpenAIScheme(description: "...")
+        let typeDescription = extractDescription(from: node)
+
         // Check if it's an enum
         if let enumDecl = declaration.as(EnumDeclSyntax.self) {
-            return try expandEnum(enumDecl: enumDecl)
+            return try expandEnum(enumDecl: enumDecl, typeDescription: typeDescription)
         }
 
         // Check if it's a struct
         if let structDecl = declaration.as(StructDeclSyntax.self) {
-            return try expandStruct(structDecl: structDecl)
+            return try expandStruct(structDecl: structDecl, typeDescription: typeDescription)
         }
 
         throw MacroError.notAStruct
     }
 
-    private static func expandEnum(enumDecl: EnumDeclSyntax) throws -> [DeclSyntax] {
+    /// Extract the description parameter from the @OpenAIScheme attribute
+    private static func extractDescription(from node: AttributeSyntax) -> String? {
+        guard let arguments = node.arguments,
+              let labeledArguments = arguments.as(LabeledExprListSyntax.self) else {
+            return nil
+        }
+
+        for argument in labeledArguments {
+            if argument.label?.text == "description",
+               let stringLiteral = argument.expression.as(StringLiteralExprSyntax.self),
+               let segment = stringLiteral.segments.first,
+               let stringSegment = segment.as(StringSegmentSyntax.self) {
+                return stringSegment.content.text
+            }
+        }
+
+        return nil
+    }
+
+    /// Extract description from @OpenAIProperty attribute on a variable
+    private static func extractPropertyDescription(from varDecl: VariableDeclSyntax) -> String? {
+        for attribute in varDecl.attributes {
+            guard let customAttribute = attribute.as(AttributeSyntax.self),
+                  let identifier = customAttribute.attributeName.as(IdentifierTypeSyntax.self),
+                  identifier.name.text == "OpenAIProperty",
+                  let arguments = customAttribute.arguments,
+                  let labeledArguments = arguments.as(LabeledExprListSyntax.self) else {
+                continue
+            }
+
+            for argument in labeledArguments {
+                if argument.label?.text == "description",
+                   let stringLiteral = argument.expression.as(StringLiteralExprSyntax.self),
+                   let segment = stringLiteral.segments.first,
+                   let stringSegment = segment.as(StringSegmentSyntax.self) {
+                    return stringSegment.content.text
+                }
+            }
+        }
+
+        return nil
+    }
+
+    private static func expandEnum(enumDecl: EnumDeclSyntax, typeDescription: String?) throws -> [DeclSyntax] {
         let enumName = enumDecl.name.text
 
         // Extract enum cases
@@ -100,6 +161,9 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
         if associatedCases.isEmpty {
             let enumValues = simpleCases.map { "\"\($0)\"" }.joined(separator: ", ")
 
+            // Add description if provided
+            let descriptionField = typeDescription.map { ",\n\t\t\t\"description\": \"\($0)\"" } ?? ""
+
             let schemaCode = """
                 nonisolated public static var openAISchema: [String: Any] {
                 [
@@ -108,7 +172,7 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
                     "strict": true,
                     "schema": [
                         "type": "string",
-                        "enum": [\(enumValues)]
+                        "enum": [\(enumValues)]\(descriptionField)
                     ]
                 ]
             }
@@ -130,6 +194,9 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
 
             let requiredFields = params.map { "\"\($0.label)\"" }.joined(separator: ", ")
 
+            // Add type description to the case property if provided
+            let caseDescriptionField = typeDescription.map { ",\n\t\t\t\t\t\t\"description\": \"\($0)\"" } ?? ""
+
             return """
             [
                     "type": "object",
@@ -140,7 +207,7 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
                             \(properties)
                             ],
                             "required": [\(requiredFields)],
-                            "additionalProperties": false
+                            "additionalProperties": false\(caseDescriptionField)
                         ]
                     ],
                     "required": ["\(caseName)"],
@@ -167,18 +234,21 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
         return [DeclSyntax(stringLiteral: schemaCode)]
     }
 
-    private static func expandStruct(structDecl: StructDeclSyntax) throws -> [DeclSyntax] {
+    private static func expandStruct(structDecl: StructDeclSyntax, typeDescription: String?) throws -> [DeclSyntax] {
         // 2. Get the struct name
         let structName = structDecl.name.text
 
-        // 3. Extract all stored properties
+        // 3. Extract all stored properties with descriptions
         let members = structDecl.memberBlock.members
-        var properties: [(name: String, type: String)] = []
+        var properties: [(name: String, type: String, description: String?)] = []
 
         for member in members {
               guard let varDecl = member.decl.as(VariableDeclSyntax.self) else {
                   continue
               }
+
+              // Extract property description from @OpenAIProperty attribute
+              let propertyDescription = extractPropertyDescription(from: varDecl)
 
               // Get property name and type
               for binding in varDecl.bindings {
@@ -190,42 +260,51 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
                   let propertyName = identifier.identifier.text
                   let propertyType = typeAnnotation.type.description//.trimmingCharacters(in: .whitespaces)
 
-                  properties.append((name: propertyName, type: propertyType))
+                  properties.append((name: propertyName, type: propertyType, description: propertyDescription))
               }
         }
 
         // 4. Generate the schema properties dictionary
         let propertiesEntries = properties.map { prop in
             let typeInfo = mapSwiftTypeToJSONType(prop.type)
+            let descriptionField = prop.description.map { ", \"description\": \"\($0)\"" } ?? ""
 
             if typeInfo.isArray {
                 // Handle array types
                 guard let elementType = typeInfo.elementType else {
-                    return "\"\(prop.name)\": [\"type\": \"array\", \"items\": [:]]"
+                    return "\"\(prop.name)\": [\"type\": \"array\", \"items\": [:]\(descriptionField)]"
                 }
 
                 let elementTypeInfo = mapSwiftTypeToJSONType(elementType)
 
                 if elementTypeInfo.jsonType == "object" || elementTypeInfo.jsonType == "enum" {
                     // Array of custom types
-                    return "\"\(prop.name)\": [\"type\": \"array\", \"items\": \(elementType).openAISchema[\"schema\"] as! [String: Any]]"
+                    return "\"\(prop.name)\": [\"type\": \"array\", \"items\": \(elementType).openAISchema[\"schema\"] as! [String: Any]\(descriptionField)]"
                 } else {
                     // Array of primitives
-                    return "\"\(prop.name)\": [\"type\": \"array\", \"items\": [\"type\": \"\(elementTypeInfo.jsonType)\"]]"
+                    return "\"\(prop.name)\": [\"type\": \"array\", \"items\": [\"type\": \"\(elementTypeInfo.jsonType)\"]\(descriptionField)]"
                 }
             } else if typeInfo.jsonType == "object" || typeInfo.jsonType == "enum" {
                 // For custom types (structs/enums), reference their schema
-                return "\"\(prop.name)\": \(prop.type).openAISchema[\"schema\"] as! [String: Any]"
+                // Need to merge description into the referenced schema
+                if let desc = prop.description {
+                    return "\"\(prop.name)\": ([\"description\": \"\(desc)\"] as [String: Any]).merging(\(prop.type).openAISchema[\"schema\"] as! [String: Any]) { current, _ in current }"
+                } else {
+                    return "\"\(prop.name)\": \(prop.type).openAISchema[\"schema\"] as! [String: Any]"
+                }
             } else {
                 // For primitives, use simple type
-                return "\"\(prop.name)\": [\"type\": \"\(typeInfo.jsonType)\"]"
+                return "\"\(prop.name)\": [\"type\": \"\(typeInfo.jsonType)\"\(descriptionField)]"
             }
         }.joined(separator: ",\n\t\t")
 
          // 5. Generate the required array
         let requiredFields = properties.map { "\"\($0.name)\"" }.joined(separator: ", ")
 
-        // 6. Generate the complete schema code
+        // 6. Add type description if provided
+        let descriptionField = typeDescription.map { ",\n\t\t\t\"description\": \"\($0)\"" } ?? ""
+
+        // 7. Generate the complete schema code
         let schemaCode =
         """
             nonisolated public static var openAISchema: [String: Any] {
@@ -239,7 +318,7 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
                     \(propertiesEntries)
                     ],
                     "required": [\(requiredFields)],
-                    "additionalProperties": false
+                    "additionalProperties": false\(descriptionField)
                 ]
             ]
         }
@@ -275,6 +354,7 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
 @main
 struct OpenAIGenerablePlugin: CompilerPlugin {
     let providingMacros: [Macro.Type] = [
-        OpenAISchemaMacro.self
+        OpenAISchemaMacro.self,
+        OpenAIPropertyMacro.self
     ]
 }

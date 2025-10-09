@@ -15,9 +15,38 @@ public protocol OpenAISchemaProviding {
 ///
 /// The macro also makes the type conform to `OpenAISchemaProviding`.
 ///
+/// - Parameter description: An optional description of the type
+///
 /// - Note: This macro currently supports:
 ///     - structs
 ///     - enums (string enums + associated values)
 @attached(member, names: named(openAISchema))
 @attached(extension, conformances: OpenAISchemaProviding)
-public macro OpenAIScheme() = #externalMacro(module: "OpenAIGenerableMacros", type: "OpenAISchemaMacro")
+public macro OpenAIScheme(description: String? = nil) = #externalMacro(module: "OpenAIGenerableMacros", type: "OpenAISchemaMacro")
+
+/// A macro that adds a description to a property for OpenAI schema generation.
+///
+/// The `@OpenAIProperty` macro is a peer macro that attaches metadata to properties.
+/// It works in conjunction with `@OpenAIScheme` to include property descriptions
+/// in the generated JSON schema.
+///
+/// - Parameter description: A description of the property
+@attached(peer)
+public macro OpenAIProperty(description: String) = #externalMacro(module: "OpenAIGenerableMacros", type: "OpenAIPropertyMacro")
+
+/*
+@OpenAIScheme(description: "description of employee")
+struct Person {
+    @OpenAIProperty(description: "name of the person")
+    var name: String
+    @OpenAIProperty(description: "age of the person")
+    var age: Int
+}
+
+@OpenAISchema(description: "the priority of the person")
+enum Priority {
+    case low
+    case medium
+    case high
+}
+*/
