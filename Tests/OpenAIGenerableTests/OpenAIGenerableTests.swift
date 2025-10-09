@@ -5,12 +5,12 @@ import SwiftSyntaxMacrosTestSupport
 import XCTest
 
 // Macro implementations build for the host, so the corresponding module is not available when cross-compiling. Cross-compiled tests may still make use of the macro itself in end-to-end tests.
-#if canImport(OpenAIGenerableMacros)
-import OpenAIGenerableMacros
+#if canImport(OpenAIModelsMacros)
+import OpenAIModelsMacros
 
 let testMacros: [String: Macro.Type] = [
-    "OpenAIScheme": OpenAISchemaMacro.self,
-    "OpenAIProperty": OpenAIPropertyMacro.self,
+    "OpenAIGenerable": OpenAISchemaMacro.self,
+    "OpenAIGuide": OpenAIPropertyMacro.self,
 ]
 #endif
 
@@ -27,10 +27,10 @@ extension String {
 final class OpenAIGenerableTests: XCTestCase {
 
     func testSimpleStructWithStrings() throws {
-        #if canImport(OpenAIGenerableMacros)
+        #if canImport(OpenAIModelsMacros)
         assertMacroExpansion(
             """
-            @OpenAIScheme
+            @OpenAIGenerable
             struct SubObject {
                 var id: String
                 var name: String
@@ -70,14 +70,14 @@ final class OpenAIGenerableTests: XCTestCase {
     }
 
     func testSimpleStructWithSubObject() throws {
-        #if canImport(OpenAIGenerableMacros)
+        #if canImport(OpenAIModelsMacros)
         assertMacroExpansion(
             """
-            @OpenAIScheme
+            @OpenAIGenerable
             struct Child {
                 var name: String
             }
-            @OpenAIScheme
+            @OpenAIGenerable
             struct Parent {
                 var id: String
                 var child: Child
@@ -139,10 +139,10 @@ final class OpenAIGenerableTests: XCTestCase {
     }
 
     func testSimpleStringEnum() throws {
-        #if canImport(OpenAIGenerableMacros)
+        #if canImport(OpenAIModelsMacros)
         assertMacroExpansion(
             """
-            @OpenAIScheme
+            @OpenAIGenerable
             enum Status {
                 case pending
                 case approved
@@ -179,15 +179,15 @@ final class OpenAIGenerableTests: XCTestCase {
     }
 
     func testStructWithEnumProperty() throws {
-        #if canImport(OpenAIGenerableMacros)
+        #if canImport(OpenAIModelsMacros)
         assertMacroExpansion(
             """
-            @OpenAIScheme
+            @OpenAIGenerable
             enum Priority {
                 case low
                 case high
             }
-            @OpenAIScheme
+            @OpenAIGenerable
             struct Task {
                 var title: String
                 var priority: Priority
@@ -246,10 +246,10 @@ final class OpenAIGenerableTests: XCTestCase {
     }
 
     func testAssociatedEnum() throws {
-        #if canImport(OpenAIGenerableMacros)
+        #if canImport(OpenAIModelsMacros)
         assertMacroExpansion(
             """
-            @OpenAIScheme
+            @OpenAIGenerable
             enum Result {
                 case success(String)
                 case error(code: Int, message: String)
@@ -315,10 +315,10 @@ final class OpenAIGenerableTests: XCTestCase {
     }
 
     func testStructWithMixedTypes() throws {
-        #if canImport(OpenAIGenerableMacros)
+        #if canImport(OpenAIModelsMacros)
         assertMacroExpansion(
             """
-            @OpenAIScheme
+            @OpenAIGenerable
             struct MixedData {
                 var name: String
                 var age: Int
@@ -361,10 +361,10 @@ final class OpenAIGenerableTests: XCTestCase {
     }
 
     func testArrayFields() throws {
-        #if canImport(OpenAIGenerableMacros)
+        #if canImport(OpenAIModelsMacros)
         assertMacroExpansion(
             """
-            @OpenAIScheme
+            @OpenAIGenerable
             struct ArrayExample {
                 var tags: [String]
                 var scores: [Int]
@@ -407,15 +407,15 @@ final class OpenAIGenerableTests: XCTestCase {
     }
 
     func testArrayOfCustomTypes() throws {
-        #if canImport(OpenAIGenerableMacros)
+        #if canImport(OpenAIModelsMacros)
         assertMacroExpansion(
             """
-            @OpenAIScheme
+            @OpenAIGenerable
             struct Person {
                 var name: String
             }
 
-            @OpenAIScheme
+            @OpenAIGenerable
             struct Team {
                 var members: [Person]
             }
@@ -474,34 +474,34 @@ final class OpenAIGenerableTests: XCTestCase {
     }
 
     func testComplexNestedEnums() throws {
-        #if canImport(OpenAIGenerableMacros)
+        #if canImport(OpenAIModelsMacros)
         assertMacroExpansion(
             """
-            @OpenAIScheme
+            @OpenAIGenerable
             enum GarageTool {
                 case scissors
                 case screw
             }
 
-            @OpenAIScheme
+            @OpenAIGenerable
             enum GardenTool {
                 case shovel
                 case spade
             }
 
-            @OpenAIScheme
+            @OpenAIGenerable
             enum HouseTool {
                 case garden(GardenTool)
                 case garage(GarageTool)
             }
 
-            @OpenAIScheme
+            @OpenAIGenerable
             enum Quantity {
                 case count(Int)
                 case pounds(Double)
             }
 
-            @OpenAIScheme
+            @OpenAIGenerable
             struct Inventory {
                 var quantity: Quantity
                 var houseTool: HouseTool
@@ -677,10 +677,10 @@ final class OpenAIGenerableTests: XCTestCase {
     }
 
     func testStructWithTypeDescription() throws {
-        #if canImport(OpenAIGenerableMacros)
+        #if canImport(OpenAIModelsMacros)
         assertMacroExpansion(
             """
-            @OpenAIScheme(description: "A person object")
+            @OpenAIGenerable(description: "A person object")
             struct Person {
                 var name: String
                 var age: Int
@@ -721,10 +721,10 @@ final class OpenAIGenerableTests: XCTestCase {
     }
 
     func testStructWithPropertyDescriptions() throws {
-        #if canImport(OpenAIGenerableMacros)
+        #if canImport(OpenAIModelsMacros)
         assertMacroExpansion(
             """
-            @OpenAIScheme(description: "A person object")
+            @OpenAIGenerable(description: "A person object")
             struct Person {
                 @OpenAIProperty(description: "The person's full name")
                 var name: String
@@ -767,10 +767,10 @@ final class OpenAIGenerableTests: XCTestCase {
     }
 
     func testSimpleEnumWithDescription() throws {
-        #if canImport(OpenAIGenerableMacros)
+        #if canImport(OpenAIModelsMacros)
         assertMacroExpansion(
             """
-            @OpenAIScheme(description: "Priority levels")
+            @OpenAIGenerable(description: "Priority levels")
             enum Priority {
                 case low
                 case medium
@@ -811,10 +811,10 @@ final class OpenAIGenerableTests: XCTestCase {
     // The functionality has been verified to work correctly via the demo client.
     // The description is correctly placed in the case property dictionaries (success/error).
     func testAssociatedEnumWithDescription() throws {
-        #if canImport(OpenAIGenerableMacros)
+        #if canImport(OpenAIModelsMacros)
         assertMacroExpansion(
             """
-            @OpenAIScheme(description: "Result type for operations")
+            @OpenAIGenerable(description: "Result type for operations")
             enum Result {
                 case success(String)
                 case error(code: Int, message: String)

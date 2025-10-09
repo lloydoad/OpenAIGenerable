@@ -13,7 +13,7 @@ enum MacroError: Error, CustomStringConvertible {
     var description: String {
         switch self {
         case .notAStruct:
-            return "@OpenAIScheme can only be applied to structs or enums"
+            return "@OpenAIGenerable can only be applied to structs or enums"
         }
     }
 }
@@ -100,12 +100,12 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
         return nil
     }
 
-    /// Extract description from @OpenAIProperty attribute on a variable
+    /// Extract description from @OpenAIGuide attribute on a variable
     private static func extractPropertyDescription(from varDecl: VariableDeclSyntax) -> String? {
         for attribute in varDecl.attributes {
             guard let customAttribute = attribute.as(AttributeSyntax.self),
                   let identifier = customAttribute.attributeName.as(IdentifierTypeSyntax.self),
-                  identifier.name.text == "OpenAIProperty",
+                  identifier.name.text == "OpenAIGuide",
                   let arguments = customAttribute.arguments,
                   let labeledArguments = arguments.as(LabeledExprListSyntax.self) else {
                 continue

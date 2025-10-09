@@ -9,7 +9,7 @@ public protocol OpenAISchemaProviding {
 
 /// A macro that generates a JSON schema representation for a struct or enum.
 ///
-/// The `@OpenAIScheme` macro can be applied to structs or enums to automatically
+/// The `@OpenAIGenerable` macro can be applied to structs or enums to automatically
 /// generate a static `openAISchema` property. This property provides a JSON schema
 /// that describes the structure and types of the fields within the struct or enum.
 ///
@@ -22,14 +22,14 @@ public protocol OpenAISchemaProviding {
 ///     - enums (string enums + associated values)
 @attached(member, names: named(openAISchema))
 @attached(extension, conformances: OpenAISchemaProviding)
-public macro OpenAIScheme(description: String? = nil) = #externalMacro(module: "OpenAIGenerableMacros", type: "OpenAISchemaMacro")
+public macro OpenAIGenerable(description: String? = nil) = #externalMacro(module: "OpenAIModelsMacros", type: "OpenAISchemaMacro")
 
 /// A macro that adds a description to a property for OpenAI schema generation.
 ///
-/// The `@OpenAIProperty` macro is a peer macro that attaches metadata to properties.
-/// It works in conjunction with `@OpenAIScheme` to include property descriptions
+/// The `@OpenAIGuide` macro is a peer macro that attaches metadata to properties.
+/// It works in conjunction with `@OpenAIGenerable` to include property descriptions
 /// in the generated JSON schema.
 ///
 /// - Parameter description: A description of the property
 @attached(peer)
-public macro OpenAIProperty(description: String) = #externalMacro(module: "OpenAIGenerableMacros", type: "OpenAIPropertyMacro")
+public macro OpenAIGuide(description: String) = #externalMacro(module: "OpenAIModelsMacros", type: "OpenAIPropertyMacro")

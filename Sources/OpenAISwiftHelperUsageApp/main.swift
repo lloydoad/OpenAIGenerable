@@ -1,17 +1,17 @@
-import OpenAIGenerable
+import OpenAIModels
 import Foundation
 
 // Example 1: Simple struct with primitives
-@OpenAIScheme(description: "A person entity")
+@OpenAIGenerable(description: "A person entity")
 struct Person {
-    @OpenAIProperty(description: "Full name")
+    @OpenAIGuide(description: "Full name")
     var name: String
-    @OpenAIProperty(description: "Age in years")
+    @OpenAIGuide(description: "Age in years")
     var age: Int
 }
 
 // Example 2: Simple enum
-@OpenAIScheme(description: "Task priority levels")
+@OpenAIGenerable(description: "Task priority levels")
 enum Priority {
     case low
     case medium
@@ -19,14 +19,14 @@ enum Priority {
 }
 
 // Example 3: Enum with associated values
-@OpenAIScheme(description: "Result type for operations")
+@OpenAIGenerable(description: "Result type for operations")
 enum Result {
     case success(String)
     case error(code: Int, message: String)
 }
 
 // Example 4: Arrays
-@OpenAIScheme
+@OpenAIGenerable
 struct Team {
     var name: String
     var members: [Person]
@@ -34,44 +34,44 @@ struct Team {
 }
 
 // Example 5: Complex nested structure
-@OpenAIScheme(description: "used to represent the state of a task")
+@OpenAIGenerable(description: "used to represent the state of a task")
 enum Status {
     case pending
     case completed(Result)
 }
 
-@OpenAIScheme(description: "Work task. usually the smallest unit of work")
+@OpenAIGenerable(description: "Work task. usually the smallest unit of work")
 struct Task {
-    @OpenAIProperty(description: "summary title, should be less that 10 words")
+    @OpenAIGuide(description: "summary title, should be less that 10 words")
     var title: String
-    @OpenAIProperty(description: "name of developer(s) working on task")
+    @OpenAIGuide(description: "name of developer(s) working on task")
     var assignees: [String]
-    @OpenAIProperty(description: "state of task")
+    @OpenAIGuide(description: "state of task")
     var status: Status
 }
 
-@OpenAIScheme(description: "Work task. usually the smallest unit of work")
+@OpenAIGenerable(description: "Work task. usually the smallest unit of work")
 struct ComplexTask {
-    @OpenAIProperty(description: "summary title, should be less that 10 words")
+    @OpenAIGuide(description: "summary title, should be less that 10 words")
     var title: String
-    @OpenAIProperty(description: "developer(s) working on task")
+    @OpenAIGuide(description: "developer(s) working on task")
     var assignees: [Person]
-    @OpenAIProperty(description: "state of task")
+    @OpenAIGuide(description: "state of task")
     var status: Status
 }
 
 // Example 6: Optional properties
-@OpenAIScheme(description: "User profile with optional fields")
+@OpenAIGenerable(description: "User profile with optional fields")
 struct UserProfile {
-    @OpenAIProperty(description: "User's unique identifier")
+    @OpenAIGuide(description: "User's unique identifier")
     var id: String
-    @OpenAIProperty(description: "User's full name")
+    @OpenAIGuide(description: "User's full name")
     var name: String
-    @OpenAIProperty(description: "User's email address (optional)")
+    @OpenAIGuide(description: "User's email address (optional)")
     var email: String?
-    @OpenAIProperty(description: "User's age (optional)")
+    @OpenAIGuide(description: "User's age (optional)")
     var age: Int?
-    @OpenAIProperty(description: "User's bio (optional)")
+    @OpenAIGuide(description: "User's bio (optional)")
     var bio: String?
 }
 
