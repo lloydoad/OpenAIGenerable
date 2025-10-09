@@ -234,8 +234,7 @@ See the [OpenAISwiftHelperUsageApp](Sources/OpenAISwiftHelperUsageApp/main.swift
 - macOS 10.15+ / iOS 13.0+ / tvOS 13.0+ / watchOS 6.0+
 
 ## License
-
-[Your License Here]
+[wip]
 
 ## Contributing
 
