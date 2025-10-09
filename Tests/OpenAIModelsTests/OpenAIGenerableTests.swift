@@ -24,7 +24,7 @@ extension String {
     }
 }
 
-final class OpenAIGenerableTests: XCTestCase {
+final class OpenAIModelsTests: XCTestCase {
 
     func testSimpleStructWithStrings() throws {
         #if canImport(OpenAIModelsMacros)
