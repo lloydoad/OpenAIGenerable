@@ -50,6 +50,16 @@ struct Task {
     var status: Status
 }
 
+@OpenAIScheme(description: "Work task. usually the smallest unit of work")
+struct ComplexTask {
+    @OpenAIProperty(description: "summary title, should be less that 10 words")
+    var title: String
+    @OpenAIProperty(description: "developer(s) working on task")
+    var assignees: [Person]
+    @OpenAIProperty(description: "state of task")
+    var status: Status
+}
+
 // Helper function to convert schema to pretty JSON string
 func printSchema(name: String, schema: [String: Any]) {
     print("=== \(name) Schema ===")
@@ -68,3 +78,4 @@ printSchema(name: "Priority", schema: Priority.openAISchema)
 printSchema(name: "Result", schema: Result.openAISchema)
 printSchema(name: "Team", schema: Team.openAISchema)
 printSchema(name: "Task", schema: Task.openAISchema)
+printSchema(name: "ComplexTask", schema: ComplexTask.openAISchema)

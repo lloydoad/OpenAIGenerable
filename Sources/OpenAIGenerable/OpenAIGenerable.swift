@@ -34,19 +34,11 @@ public macro OpenAIScheme(description: String? = nil) = #externalMacro(module: "
 @attached(peer)
 public macro OpenAIProperty(description: String) = #externalMacro(module: "OpenAIGenerableMacros", type: "OpenAIPropertyMacro")
 
-/*
-@OpenAIScheme(description: "description of employee")
-struct Person {
-    @OpenAIProperty(description: "name of the person")
-    var name: String
-    @OpenAIProperty(description: "age of the person")
-    var age: Int
+public extension Array where Element: OpenAISchemaProviding {
+    nonisolated static var openAISchema: [String: Any] {
+        return [
+            "type": "array",
+            "items": Element.openAISchema
+        ]
+    }
 }
-
-@OpenAISchema(description: "the priority of the person")
-enum Priority {
-    case low
-    case medium
-    case high
-}
-*/
