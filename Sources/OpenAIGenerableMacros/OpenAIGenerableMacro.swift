@@ -258,7 +258,7 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
                   }
 
                   let propertyName = identifier.identifier.text
-                  let propertyType = typeAnnotation.type.description//.trimmingCharacters(in: .whitespaces)
+                  let propertyType = typeAnnotation.type.description.trimmingCharacters(in: .whitespaces)
 
                   properties.append((name: propertyName, type: propertyType, description: propertyDescription))
               }
@@ -278,8 +278,12 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
                 let elementTypeInfo = mapSwiftTypeToJSONType(elementType)
 
                 if elementTypeInfo.jsonType == "object" || elementTypeInfo.jsonType == "enum" {
-                    // Array of custom types
-                    return "\"\(prop.name)\": [\"type\": \"array\", \"items\": \(elementType).openAISchema[\"schema\"] as! [String: Any]\(descriptionField)]"
+                    // Array of custom types - need to build the array schema properly
+                    if let desc = prop.description {
+                        return "\"\(prop.name)\": [\"type\": \"array\", \"items\": \(elementType).openAISchema[\"schema\"] as! [String: Any], \"description\": \"\(desc)\"]"
+                    } else {
+                        return "\"\(prop.name)\": [\"type\": \"array\", \"items\": \(elementType).openAISchema[\"schema\"] as! [String: Any]]"
+                    }
                 } else {
                     // Array of primitives
                     return "\"\(prop.name)\": [\"type\": \"array\", \"items\": [\"type\": \"\(elementTypeInfo.jsonType)\"]\(descriptionField)]"

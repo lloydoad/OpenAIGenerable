@@ -33,12 +33,3 @@ public macro OpenAIScheme(description: String? = nil) = #externalMacro(module: "
 /// - Parameter description: A description of the property
 @attached(peer)
 public macro OpenAIProperty(description: String) = #externalMacro(module: "OpenAIGenerableMacros", type: "OpenAIPropertyMacro")
-
-public extension Array where Element: OpenAISchemaProviding {
-    nonisolated static var openAISchema: [String: Any] {
-        return [
-            "type": "array",
-            "items": Element.openAISchema
-        ]
-    }
-}
