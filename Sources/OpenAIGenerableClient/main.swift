@@ -60,6 +60,21 @@ struct ComplexTask {
     var status: Status
 }
 
+// Example 6: Optional properties
+@OpenAIScheme(description: "User profile with optional fields")
+struct UserProfile {
+    @OpenAIProperty(description: "User's unique identifier")
+    var id: String
+    @OpenAIProperty(description: "User's full name")
+    var name: String
+    @OpenAIProperty(description: "User's email address (optional)")
+    var email: String?
+    @OpenAIProperty(description: "User's age (optional)")
+    var age: Int?
+    @OpenAIProperty(description: "User's bio (optional)")
+    var bio: String?
+}
+
 // Helper function to convert schema to pretty JSON string
 func printSchema(name: String, schema: [String: Any]) {
     print("=== \(name) Schema ===")
@@ -79,3 +94,4 @@ printSchema(name: "Result", schema: Result.openAISchema)
 printSchema(name: "Team", schema: Team.openAISchema)
 printSchema(name: "Task", schema: Task.openAISchema)
 printSchema(name: "ComplexTask", schema: ComplexTask.openAISchema)
+printSchema(name: "UserProfile", schema: UserProfile.openAISchema)

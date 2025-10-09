@@ -240,7 +240,7 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
 
         // 3. Extract all stored properties with descriptions
         let members = structDecl.memberBlock.members
-        var properties: [(name: String, type: String, description: String?)] = []
+        var properties: [(name: String, type: String, description: String?, isOptional: Bool)] = []
 
         for member in members {
               guard let varDecl = member.decl.as(VariableDeclSyntax.self) else {
@@ -258,9 +258,19 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
                   }
 
                   let propertyName = identifier.identifier.text
-                  let propertyType = typeAnnotation.type.description.trimmingCharacters(in: .whitespaces)
+                  var propertyType = typeAnnotation.type.description.trimmingCharacters(in: .whitespaces)
 
-                  properties.append((name: propertyName, type: propertyType, description: propertyDescription))
+                  // Check if the type is Optional (wrapped in Optional<T> or T?)
+                  let isOptional = propertyType.hasSuffix("?") || propertyType.hasPrefix("Optional<")
+
+                  // Unwrap optional type to get the base type
+                  if propertyType.hasSuffix("?") {
+                      propertyType = String(propertyType.dropLast()).trimmingCharacters(in: .whitespaces)
+                  } else if propertyType.hasPrefix("Optional<") && propertyType.hasSuffix(">") {
+                      propertyType = String(propertyType.dropFirst(9).dropLast()).trimmingCharacters(in: .whitespaces)
+                  }
+
+                  properties.append((name: propertyName, type: propertyType, description: propertyDescription, isOptional: isOptional))
               }
         }
 
@@ -272,33 +282,47 @@ public struct OpenAISchemaMacro: MemberMacro, ExtensionMacro {
             if typeInfo.isArray {
                 // Handle array types
                 guard let elementType = typeInfo.elementType else {
-                    return "\"\(prop.name)\": [\"type\": \"array\", \"items\": [:]\(descriptionField)]"
+                    let typeField = prop.isOptional ? "[\"array\", \"null\"]" : "\"array\""
+                    return "\"\(prop.name)\": [\"type\": \(typeField), \"items\": [:]\(descriptionField)]"
                 }
 
                 let elementTypeInfo = mapSwiftTypeToJSONType(elementType)
 
                 if elementTypeInfo.jsonType == "object" || elementTypeInfo.jsonType == "enum" {
                     // Array of custom types - need to build the array schema properly
+                    let typeField = prop.isOptional ? "[\"array\", \"null\"]" : "\"array\""
                     if let desc = prop.description {
-                        return "\"\(prop.name)\": [\"type\": \"array\", \"items\": \(elementType).openAISchema[\"schema\"] as! [String: Any], \"description\": \"\(desc)\"]"
+                        return "\"\(prop.name)\": [\"type\": \(typeField), \"items\": \(elementType).openAISchema[\"schema\"] as! [String: Any], \"description\": \"\(desc)\"]"
                     } else {
-                        return "\"\(prop.name)\": [\"type\": \"array\", \"items\": \(elementType).openAISchema[\"schema\"] as! [String: Any]]"
+                        return "\"\(prop.name)\": [\"type\": \(typeField), \"items\": \(elementType).openAISchema[\"schema\"] as! [String: Any]]"
                     }
                 } else {
                     // Array of primitives
-                    return "\"\(prop.name)\": [\"type\": \"array\", \"items\": [\"type\": \"\(elementTypeInfo.jsonType)\"]\(descriptionField)]"
+                    let typeField = prop.isOptional ? "[\"array\", \"null\"]" : "\"array\""
+                    return "\"\(prop.name)\": [\"type\": \(typeField), \"items\": [\"type\": \"\(elementTypeInfo.jsonType)\"]\(descriptionField)]"
                 }
             } else if typeInfo.jsonType == "object" || typeInfo.jsonType == "enum" {
                 // For custom types (structs/enums), reference their schema
-                // Need to merge description into the referenced schema
-                if let desc = prop.description {
-                    return "\"\(prop.name)\": ([\"description\": \"\(desc)\"] as [String: Any]).merging(\(prop.type).openAISchema[\"schema\"] as! [String: Any]) { current, _ in current }"
+                if prop.isOptional {
+                    // For optional custom types, we need to add null to the anyOf or wrap in anyOf
+                    let baseSchema = "\(prop.type).openAISchema[\"schema\"] as! [String: Any]"
+                    if let desc = prop.description {
+                        return "\"\(prop.name)\": ([\"description\": \"\(desc)\", \"anyOf\": [\(baseSchema), [\"type\": \"null\"]]] as [String: Any])"
+                    } else {
+                        return "\"\(prop.name)\": [\"anyOf\": [\(baseSchema), [\"type\": \"null\"]]]"
+                    }
                 } else {
-                    return "\"\(prop.name)\": \(prop.type).openAISchema[\"schema\"] as! [String: Any]"
+                    // Non-optional custom types
+                    if let desc = prop.description {
+                        return "\"\(prop.name)\": ([\"description\": \"\(desc)\"] as [String: Any]).merging(\(prop.type).openAISchema[\"schema\"] as! [String: Any]) { current, _ in current }"
+                    } else {
+                        return "\"\(prop.name)\": \(prop.type).openAISchema[\"schema\"] as! [String: Any]"
+                    }
                 }
             } else {
                 // For primitives, use simple type
-                return "\"\(prop.name)\": [\"type\": \"\(typeInfo.jsonType)\"\(descriptionField)]"
+                let typeField = prop.isOptional ? "[\"\(typeInfo.jsonType)\", \"null\"]" : "\"\(typeInfo.jsonType)\""
+                return "\"\(prop.name)\": [\"type\": \(typeField)\(descriptionField)]"
             }
         }.joined(separator: ",\n\t\t")
 
